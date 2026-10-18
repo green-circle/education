@@ -130,7 +130,7 @@ class ProgramEnrollment(Document):
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
-def get_program_courses(
+def get_program_courses_old(
     doctype: str, txt: str, searchfield: str, start: int, page_len: int, filters: dict
 ):
     if not filters.get("program"):
@@ -160,6 +160,28 @@ def get_program_courses(
         .run()
     )
 
+@frappe.whitelist()
+def get_program_courses(doctype, txt, searchfield, start, page_len, filters):
+    # Extract the program from the filters passed by the JS
+    program = filters.get("program")
+    
+    if not program:
+        return []
+
+    # Simple query using Frappe ORM
+    courses = frappe.get_all(
+        "Program Course",
+        filters={
+            "parent": program,
+            "course": ["like", f"%{txt}%"] # Allows user to type and search
+        },
+        fields=["course", "course_name"],
+        start=start,
+        page_length=page_len
+    )
+
+    # Link fields expect a list of lists: [["Course ID", "Course Name"]]
+    return [[c.course, c.course_name] for c in courses]
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
